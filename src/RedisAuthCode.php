@@ -62,7 +62,7 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
             'id'                    => $code,
             'expire_time'           => $expireTime,
             'session_id'            => $sessionId,
-            'client_redirect_uri'   =>  $redirectUri
+            'client_redirect_uri'   => $redirectUri
         ];
 
         $this->setValue($code, 'oauth_auth_codes', $payload);
