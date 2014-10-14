@@ -9,118 +9,118 @@ use League\OAuth2\Server\Entity\RefreshTokenEntity;
 class RedisAccessTokenTest extends PHPUnit_Framework_TestCase {
 
 
-	public function tearDown()
-	{
-		m::close();
-	}
+    public function tearDown()
+    {
+        m::close();
+    }
 
 
-	public function setUp()
-	{
-		$this->redis = m::mock('Predis\Client');
-		$this->server = m::mock('League\OAuth2\Server\AbstractServer');
-		$this->storage = new RedisAccessToken($this->redis);
-		$this->storage->setServer($this->server);
-	}
+    public function setUp()
+    {
+        $this->redis = m::mock('Predis\Client');
+        $this->server = m::mock('League\OAuth2\Server\AbstractServer');
+        $this->storage = new RedisAccessToken($this->redis);
+        $this->storage->setServer($this->server);
+    }
 
 
-	public function testGetAccessTokenReturnsNullForInvalidAccessToken()
-	{
-		$this->redis->shouldReceive('get')->once()->with('oauth:access:tokens:foo')->andReturn(null);
+    public function testGetAccessTokenReturnsNullForInvalidAccessToken()
+    {
+        $this->redis->shouldReceive('get')->once()->with('oauth:access:tokens:foo')->andReturn(null);
 
-		$this->assertNull($this->storage->get('foo'));
-	}
-
-
-	public function testGetAccessTokenReturnsAccessTokenEntity()
-	{
-		$this->redis->shouldReceive('get')->once()->with('oauth:access:tokens:foo')->andReturn('{"id":"foo","expire_time":1}');
-
-		$token = $this->storage->get('foo');
-
-		$this->assertInstanceOf('League\OAuth2\Server\Entity\AccessTokenEntity', $token);
-		$this->assertEquals('foo', $token->getToken());
-		$this->assertEquals(1, $token->getExpireTime());
-	}
+        $this->assertNull($this->storage->get('foo'));
+    }
 
 
-	public function testGetAccessTokenByRefreshTokenReturnsNullForInvalidRefreshToken()
-	{
-		$this->redis->shouldReceive('get')->once()->with('oauth:refresh:tokens:foo')->andReturn(null);
+    public function testGetAccessTokenReturnsAccessTokenEntity()
+    {
+        $this->redis->shouldReceive('get')->once()->with('oauth:access:tokens:foo')->andReturn('{"id":"foo","expire_time":1}');
 
-		$refresh = (new RefreshTokenEntity($this->server))->setToken('foo');
+        $token = $this->storage->get('foo');
 
-		$this->assertNull($this->storage->getByRefreshToken($refresh));
-	}
-
-
-	public function testGetAccessTokenByRefreshTokenReturnsAccessTokenEntity()
-	{
-		$this->redis->shouldReceive('get')->once()->with('oauth:refresh:tokens:foo')->andReturn('{"access_token":"bar"}');
-		$this->redis->shouldReceive('get')->once()->with('oauth:access:tokens:bar')->andReturn('{"id":"bar","expire_time":1}');
-
-		$refresh = (new RefreshTokenEntity($this->server))->setToken('foo');
-		$access = $this->storage->getByRefreshToken($refresh);
-
-		$this->assertInstanceOf('League\OAuth2\Server\Entity\AccessTokenEntity', $access);
-		$this->assertEquals('bar', $access->getToken());
-		$this->assertEquals(1, $access->getExpireTime());
-	}
+        $this->assertInstanceOf('League\OAuth2\Server\Entity\AccessTokenEntity', $token);
+        $this->assertEquals('foo', $token->getId());
+        $this->assertEquals(1, $token->getExpireTime());
+    }
 
 
-	public function testGetAccessTokenScopes()
-	{
-		$this->redis->shouldReceive('smembers')->once()->with('oauth:access:token:scopes:foo')->andReturn([
-			['id' => 'foo'],
-			['id' => 'bar'],
-			['id' => 'baz']
-		]);
-		$this->redis->shouldReceive('get')->once()->with('oauth:scopes:foo')->andReturn(['id' => 'foo', 'description' => 'foo']);
-		$this->redis->shouldReceive('get')->once()->with('oauth:scopes:bar')->andReturn(null);
-		$this->redis->shouldReceive('get')->once()->with('oauth:scopes:baz')->andReturn(['id' => 'baz', 'description' => 'baz']);
+    public function testGetAccessTokenByRefreshTokenReturnsNullForInvalidRefreshToken()
+    {
+        $this->redis->shouldReceive('get')->once()->with('oauth:refresh:tokens:foo')->andReturn(null);
 
-		$scopes = $this->storage->getScopes((new AccessTokenEntity($this->server))->setToken('foo'));
+        $refresh = (new RefreshTokenEntity($this->server))->setId('foo');
 
-		$this->assertCount(2, $scopes);
-		$this->assertEquals('foo', $scopes[0]->getId());
-		$this->assertEquals('baz', $scopes[1]->getId());
-	}
+        $this->assertNull($this->storage->getByRefreshToken($refresh));
+    }
 
 
-	public function testCreateNewAccessTokenEntity()
-	{
-		$this->redis->shouldReceive('set')->once()->with('oauth:access:tokens:foo', '{"id":"foo","expire_time":1,"session_id":1}');
-		$this->redis->shouldReceive('sadd')->once()->with('oauth:access:tokens', 'foo');
+    public function testGetAccessTokenByRefreshTokenReturnsAccessTokenEntity()
+    {
+        $this->redis->shouldReceive('get')->once()->with('oauth:refresh:tokens:foo')->andReturn('{"access_token_id":"bar"}');
+        $this->redis->shouldReceive('get')->once()->with('oauth:access:tokens:bar')->andReturn('{"id":"bar","expire_time":1}');
 
-		$token = $this->storage->create('foo', 1, 1);
+        $refresh = (new RefreshTokenEntity($this->server))->setId('foo');
+        $access = $this->storage->getByRefreshToken($refresh);
 
-		$this->assertInstanceOf('League\OAuth2\Server\Entity\AccessTokenEntity', $token);
-		$this->assertEquals('foo', $token->getToken());
-		$this->assertEquals(1, $token->getExpireTime());
-	}
-
-
-	public function testAssociatingScopeWithAccessToken()
-	{
-		$token = (new AccessTokenEntity($this->server))->setToken('foo');
-		$scope = (new ScopeEntity($this->server))->setId('bar');
-
-		$this->redis->shouldReceive('sadd')->once()->with('oauth:access:token:scopes:foo', '{"id":"bar"}');
-
-		$this->storage->associateScope($token, $scope);
-	}
+        $this->assertInstanceOf('League\OAuth2\Server\Entity\AccessTokenEntity', $access);
+        $this->assertEquals('bar', $access->getId());
+        $this->assertEquals(1, $access->getExpireTime());
+    }
 
 
-	public function testDeleteAccessTokenEntity()
-	{
-		$this->redis->shouldReceive('del')->once()->with('oauth:access:tokens:foo');
-		$this->redis->shouldReceive('del')->once()->with('oauth:access:token:scopes:foo');
-		$this->redis->shouldReceive('srem')->once()->with('oauth:access:tokens', 'foo');
+    public function testGetAccessTokenScopes()
+    {
+        $this->redis->shouldReceive('smembers')->once()->with('oauth:access:token:scopes:foo')->andReturn([
+            ['id' => 'foo'],
+            ['id' => 'bar'],
+            ['id' => 'baz']
+        ]);
+        $this->redis->shouldReceive('get')->once()->with('oauth:scopes:foo')->andReturn(['id' => 'foo', 'description' => 'foo']);
+        $this->redis->shouldReceive('get')->once()->with('oauth:scopes:bar')->andReturn(null);
+        $this->redis->shouldReceive('get')->once()->with('oauth:scopes:baz')->andReturn(['id' => 'baz', 'description' => 'baz']);
 
-		$token = (new AccessTokenEntity($this->server))->setToken('foo');
+        $scopes = $this->storage->getScopes((new AccessTokenEntity($this->server))->setId('foo'));
 
-		$this->storage->delete($token);
-	}
+        $this->assertCount(2, $scopes);
+        $this->assertEquals('foo', $scopes[0]->getId());
+        $this->assertEquals('baz', $scopes[1]->getId());
+    }
+
+
+    public function testCreateNewAccessTokenEntity()
+    {
+        $this->redis->shouldReceive('set')->once()->with('oauth:access:tokens:foo', '{"id":"foo","expire_time":1,"session_id":1}');
+        $this->redis->shouldReceive('sadd')->once()->with('oauth:access:tokens', 'foo');
+
+        $token = $this->storage->create('foo', 1, 1);
+
+        $this->assertInstanceOf('League\OAuth2\Server\Entity\AccessTokenEntity', $token);
+        $this->assertEquals('foo', $token->getId());
+        $this->assertEquals(1, $token->getExpireTime());
+    }
+
+
+    public function testAssociatingScopeWithAccessToken()
+    {
+        $token = (new AccessTokenEntity($this->server))->setId('foo');
+        $scope = (new ScopeEntity($this->server))->hydrate(['id' => 'bar']);
+
+        $this->redis->shouldReceive('sadd')->once()->with('oauth:access:token:scopes:foo', '{"id":"bar"}');
+
+        $this->storage->associateScope($token, $scope);
+    }
+
+
+    public function testDeleteAccessTokenEntity()
+    {
+        $this->redis->shouldReceive('del')->once()->with('oauth:access:tokens:foo');
+        $this->redis->shouldReceive('del')->once()->with('oauth:access:token:scopes:foo');
+        $this->redis->shouldReceive('srem')->once()->with('oauth:access:tokens', 'foo');
+
+        $token = (new AccessTokenEntity($this->server))->setId('foo');
+
+        $this->storage->delete($token);
+    }
 
 
 }

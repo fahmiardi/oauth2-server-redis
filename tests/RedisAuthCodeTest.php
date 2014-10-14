@@ -8,94 +8,94 @@ use League\OAuth2\Server\Entity\AuthCodeEntity;
 class RedisAuthCodeTest extends PHPUnit_Framework_TestCase {
 
 
-	public function tearDown()
-	{
-		m::close();
-	}
+    public function tearDown()
+    {
+        m::close();
+    }
 
 
-	public function setUp()
-	{
-		$this->redis = m::mock('Predis\Client');
-		$this->server = m::mock('League\OAuth2\Server\AbstractServer');
-		$this->storage = new RedisAuthCode($this->redis);
-		$this->storage->setServer($this->server);
-	}
+    public function setUp()
+    {
+        $this->redis = m::mock('Predis\Client');
+        $this->server = m::mock('League\OAuth2\Server\AbstractServer');
+        $this->storage = new RedisAuthCode($this->redis);
+        $this->storage->setServer($this->server);
+    }
 
 
-	public function testGetAuthCodeReturnsNullForInvalidAuthCode()
-	{
-		$this->redis->shouldReceive('get')->once()->with('oauth:auth:codes:foo')->andReturn(null);
+    public function testGetAuthCodeReturnsNullForInvalidAuthCode()
+    {
+        $this->redis->shouldReceive('get')->once()->with('oauth:auth:codes:foo')->andReturn(null);
 
-		$this->assertNull($this->storage->get('foo'));
-	}
-
-
-	public function testGetAuthCodeReturnsAuthCodeEntity()
-	{
-		$this->redis->shouldReceive('get')->once()->with('oauth:auth:codes:foo')->andReturn('{"id":"foo","expire_time":1}');
-
-		$code = $this->storage->get('foo');
-
-		$this->assertInstanceOf('League\OAuth2\Server\Entity\AuthCodeEntity', $code);
-		$this->assertEquals('foo', $code->getToken());
-		$this->assertEquals(1, $code->getExpireTime());
-	}
+        $this->assertNull($this->storage->get('foo'));
+    }
 
 
-	public function testGetAuthCodeScopes()
-	{
-		$this->redis->shouldReceive('smembers')->once()->with('oauth:auth:code:scopes:foo')->andReturn([
-			['id' => 'foo'],
-			['id' => 'bar'],
-			['id' => 'baz']
-		]);
-		$this->redis->shouldReceive('get')->once()->with('oauth:scopes:foo')->andReturn(['id' => 'foo', 'description' => 'foo']);
-		$this->redis->shouldReceive('get')->once()->with('oauth:scopes:bar')->andReturn(null);
-		$this->redis->shouldReceive('get')->once()->with('oauth:scopes:baz')->andReturn(['id' => 'baz', 'description' => 'baz']);
+    public function testGetAuthCodeReturnsAuthCodeEntity()
+    {
+        $this->redis->shouldReceive('get')->once()->with('oauth:auth:codes:foo')->andReturn('{"id":"foo","client_redirect_uri":"bar"}');
 
-		$scopes = $this->storage->getScopes((new AuthCodeEntity($this->server))->setToken('foo'));
+        $code = $this->storage->get('foo');
 
-		$this->assertCount(2, $scopes);
-		$this->assertEquals('foo', $scopes[0]->getId());
-		$this->assertEquals('baz', $scopes[1]->getId());
-	}
+        $this->assertInstanceOf('League\OAuth2\Server\Entity\AuthCodeEntity', $code);
+        $this->assertEquals('foo', $code->getId());
+        $this->assertEquals('bar', $code->getRedirectUri());
+    }
 
 
-	public function testCreateNewAuthCodeEntity()
-	{
-		$this->redis->shouldReceive('set')->once()->with('oauth:auth:codes:foo', '{"id":"foo","expire_time":1,"session_id":1}');
-		$this->redis->shouldReceive('sadd')->once()->with('oauth:auth:codes', 'foo');
+    public function testGetAuthCodeScopes()
+    {
+        $this->redis->shouldReceive('smembers')->once()->with('oauth:auth:code:scopes:foo')->andReturn([
+            ['id' => 'foo'],
+            ['id' => 'bar'],
+            ['id' => 'baz']
+        ]);
+        $this->redis->shouldReceive('get')->once()->with('oauth:scopes:foo')->andReturn(['id' => 'foo', 'description' => 'foo']);
+        $this->redis->shouldReceive('get')->once()->with('oauth:scopes:bar')->andReturn(null);
+        $this->redis->shouldReceive('get')->once()->with('oauth:scopes:baz')->andReturn(['id' => 'baz', 'description' => 'baz']);
 
-		$code = $this->storage->create('foo', 1, 1);
+        $scopes = $this->storage->getScopes((new AuthCodeEntity($this->server))->setId('foo'));
 
-		$this->assertInstanceOf('League\OAuth2\Server\Entity\AuthCodeEntity', $code);
-		$this->assertEquals('foo', $code->getToken());
-		$this->assertEquals(1, $code->getExpireTime());
-	}
-
-
-	public function testAssociatingScopeWithAuthCode()
-	{
-		$code = (new AuthCodeEntity($this->server))->setToken('foo');
-		$scope = (new ScopeEntity($this->server))->setId('bar');
-
-		$this->redis->shouldReceive('sadd')->once()->with('oauth:auth:code:scopes:foo', '{"id":"bar"}');
-
-		$this->storage->associateScope($code, $scope);
-	}
+        $this->assertCount(2, $scopes);
+        $this->assertEquals('foo', $scopes[0]->getId());
+        $this->assertEquals('baz', $scopes[1]->getId());
+    }
 
 
-	public function testDeleteAuthCodeEntity()
-	{
-		$this->redis->shouldReceive('del')->once()->with('oauth:auth:codes:foo');
-		$this->redis->shouldReceive('del')->once()->with('oauth:auth:code:scopes:foo');
-		$this->redis->shouldReceive('srem')->once()->with('oauth:auth:codes', 'foo');
+    public function testCreateNewAuthCodeEntity()
+    {
+        $this->redis->shouldReceive('set')->once()->with('oauth:auth:codes:foo', '{"id":"foo","client_redirect_uri":"bar","session_id":1}');
+        $this->redis->shouldReceive('sadd')->once()->with('oauth:auth:codes', 'foo');
 
-		$code = (new AuthCodeEntity($this->server))->setToken('foo');
+        $code = $this->storage->create('foo', 1, 1, 'bar');
 
-		$this->storage->delete($code);
-	}
+        $this->assertInstanceOf('League\OAuth2\Server\Entity\AuthCodeEntity', $code);
+        $this->assertEquals('foo', $code->getId());
+        $this->assertEquals('bar', $code->getRedirectUri());
+    }
+
+
+    public function testAssociatingScopeWithAuthCode()
+    {
+        $code = (new AuthCodeEntity($this->server))->setId('foo');
+        $scope = (new ScopeEntity($this->server))->hydrate(['id' => 'bar']);
+
+        $this->redis->shouldReceive('sadd')->once()->with('oauth:auth:code:scopes:foo', '{"id":"bar"}');
+
+        $this->storage->associateScope($code, $scope);
+    }
+
+
+    public function testDeleteAuthCodeEntity()
+    {
+        $this->redis->shouldReceive('del')->once()->with('oauth:auth:codes:foo');
+        $this->redis->shouldReceive('del')->once()->with('oauth:auth:code:scopes:foo');
+        $this->redis->shouldReceive('srem')->once()->with('oauth:auth:codes', 'foo');
+
+        $code = (new AuthCodeEntity($this->server))->setId('foo');
+
+        $this->storage->delete($code);
+    }
 
 
 }
