@@ -28,6 +28,21 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
     }
 
     /**
+     * Get access token from Redis storage by an associated refresh token.
+     *
+     * @param  \League\OAuth2\Server\Entity\RefreshTokenEntity  $refreshToken
+     * @return \League\OAuth2\Server\Entity\AccessTokenEntity|null
+     */
+    public function getByRefreshToken(RefreshTokenEntity $refreshToken)
+    {
+        if (! $refresh = $this->getValue($refreshToken->getId(), 'oauth_refresh_tokens')) {
+            return null;
+        }
+
+        return $this->get($refresh['access_token_id']);
+    }
+
+    /**
      * Get associated access token scopes from Redis storage.
      *
      * @param  \League\OAuth2\Server\Entity\AbstractTokenEntity  $token
