@@ -10,14 +10,14 @@ class RedisClient extends RedisAdapter implements ClientInterface
 {
     /**
      * Indicates if clients are limited to specific grants.
-     * 
+     *
      * @var bool
      */
     protected $limitClientsToGrants = false;
 
     /**
      * Limits clients to specific grants.
-     * 
+     *
      * @return \Lewis\OAuth2\Server\Storage\RedisClient
      */
     public function limitClientsToGrants()
@@ -29,7 +29,7 @@ class RedisClient extends RedisAdapter implements ClientInterface
 
     /**
      * Get client from Redis storage.
-     * 
+     *
      * @param  string  $clientId
      * @param  string  $clientSecret
      * @param  string  $redirectUri
@@ -74,16 +74,17 @@ class RedisClient extends RedisAdapter implements ClientInterface
             return null;
         }
 
-        return (new ClientEntity($this->getServer()))
-            ->setId($client['id'])
-            ->setSecret($client['secret'])
-            ->setName($client['name'])
-            ->setRedirectUri($client['redirect_uri']);
+        return (new ClientEntity($this->server))->hydrate([
+            'id'            => $client['id'],
+            'secret'        => $client['secret'],
+            'name'          => $client['name'],
+            'redirect_uri'  => $client['redirect_uri']
+        ]);
     }
 
     /**
      * Get a matching redirect URI associated with a client.
-     * 
+     *
      * @param  string  $clientId
      * @param  string  $redirectUri
      * @return string|null
@@ -97,7 +98,7 @@ class RedisClient extends RedisAdapter implements ClientInterface
 
     /**
      * Get client from Redis storage by an associated session.
-     * 
+     *
      * @param  \League\OAuth2\Server\Entity\SessionEntity  $session
      * @return \League\OAuth2\Server\Entity\ClientEntity|null
      */
@@ -112,7 +113,7 @@ class RedisClient extends RedisAdapter implements ClientInterface
 
     /**
      * Determines if the client is able to use the grant type specified.
-     * 
+     *
      * @param  string  $clientId
      * @param  string  $grantType
      * @return bool

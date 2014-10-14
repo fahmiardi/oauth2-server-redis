@@ -14,14 +14,15 @@ class RedisScope extends RedisAdapter implements ScopeInterface
      * @param  string  $grantType
      * @return \League\OAuth2\Server\Entity\ScopeEntity|null
      */
-    public function get($scope, $grantType = null)
+    public function get($scope, $grantType = null, $clientId = null)
     {
         if (! $scope = $this->getValue($scope, 'oauth_scopes')) {
             return null;
         }
 
-        return (new ScopeEntity($this->getServer()))
-            ->setId($scope['id'])
-            ->setDescription($scope['description']);
+        return (new ScopeEntity($this->server))->hydrate([
+            'id'            => $scope['id'],
+            'description'   => $scope['description']
+        ]);
     }
 }

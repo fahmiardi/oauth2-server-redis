@@ -12,7 +12,7 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
 {
     /**
      * Get access token from Redis storage.
-     * 
+     *
      * @param  string  $token
      * @return \League\OAuth2\Server\Entity\AccessTokenEntity|null
      */
@@ -22,29 +22,14 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
             return null;
         }
 
-        return (new AccessTokenEntity($this->getServer()))
-            ->setToken($access['id'])
+        return (new AccessTokenEntity($this->server))
+            ->setId($access['id'])
             ->setExpireTime($access['expire_time']);
     }
 
     /**
-     * Get access token from Redis storage by an associated refresh token.
-     * 
-     * @param  \League\OAuth2\Server\Entity\RefreshTokenEntity  $refreshToken
-     * @return \League\OAuth2\Server\Entity\AccessTokenEntity|null
-     */
-    public function getByRefreshToken(RefreshTokenEntity $refreshToken)
-    {
-        if (! $refresh = $this->getValue($refreshToken->getToken(), 'oauth_refresh_tokens')) {
-            return null;
-        }
-
-        return $this->get($refresh['access_token']);
-    }
-
-    /**
      * Get associated access token scopes from Redis storage.
-     * 
+     *
      * @param  \League\OAuth2\Server\Entity\AbstractTokenEntity  $token
      * @return array
      */
@@ -52,14 +37,15 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
     {
         $scopes = [];
 
-        foreach ($this->getSet($token->getToken(), 'oauth_access_token_scopes') as $scope) {
+        foreach ($this->getSet($token->getId(), 'oauth_access_token_scopes') as $scope) {
             if (! $scope = $this->getValue($scope['id'], 'oauth_scopes')) {
                 continue;
             }
 
-            $scopes[] = (new ScopeEntity($this->getServer()))
-                ->setId($scope['id'])
-                ->setDescription($scope['description']);
+            $scopes[] = (new ScopeEntity($this->server))->hydrate([
+                'id'            => $scope['id'],
+                'description'   => $scope['description']
+            ]);
         }
 
         return $scopes;
@@ -67,11 +53,10 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
 
     /**
      * Creates a new access token in Redis storage.
-     * 
+     *
      * @param  string  $token
      * @param  int  $expireTime
      * @param  string|int  $sessionId
-     * @return \League\OAuth2\Server\Entity\AccessTokenEntity
      */
     public function create($token, $expireTime, $sessionId)
     {
@@ -80,42 +65,38 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
             'expire_time' => $expireTime,
             'session_id'  => $sessionId
         ];
-        
+
         $this->setValue($token, 'oauth_access_tokens', $payload);
         $this->pushSet(null, 'oauth_access_tokens', $token);
-
-        return (new AccessTokenEntity($this->getServer()))
-               ->setToken($token)
-               ->setExpireTime($expireTime);
     }
 
     /**
      * Associate a scope with an access token in Redis storage.
-     * 
+     *
      * @param  \League\OAuth2\Server\Entity\AbstractTokenEntity  $token
      * @param  \League\OAuth2\Server\Entity\ScopeEntity  $scope
      * @return void
      */
     public function associateScope(AbstractTokenEntity $token, ScopeEntity $scope)
     {
-        $this->pushSet($token->getToken(), 'oauth_access_token_scopes', ['id' => $scope->getId()]);
+        $this->pushSet($token->getId(), 'oauth_access_token_scopes', ['id' => $scope->getId()]);
     }
 
     /**
      * Delete an access token from Redis storage.
-     * 
+     *
      * @param  \League\OAuth2\Server\Entity\AbstractTokenEntity  $token
      * @return void
      */
     public function delete(AbstractTokenEntity $token)
     {
         // Deletes the access token entry.
-        $this->deleteKey($token->getToken(), 'oauth_access_tokens');
+        $this->deleteKey($token->getId(), 'oauth_access_tokens');
 
         // Deletes the access token entry from the access tokens set.
-        $this->deleteSet(null, 'oauth_access_tokens', $token->getToken());
+        $this->deleteSet(null, 'oauth_access_tokens', $token->getId());
 
         // Deletes the access tokens associated scopes.
-        $this->deleteKey($token->getToken(), 'oauth_access_token_scopes');
+        $this->deleteKey($token->getId(), 'oauth_access_token_scopes');
     }
 }

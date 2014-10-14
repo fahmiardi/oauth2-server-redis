@@ -10,7 +10,7 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
 {
     /**
      * Get an authorization code from Redis storage.
-     * 
+     *
      * @param  string  $code
      * @return \League\OAuth2\Server\Entity\AuthCodeEntity|null
      */
@@ -20,14 +20,14 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
             return null;
         }
 
-        return (new AuthCodeEntity($this->getServer()))
-            ->setToken($code['id'])
-            ->setExpireTime($code['expire_time']);
+        return (new AuthCodeEntity($this->server))
+            ->setId($code['id'])
+            ->setRedirectUri($code['client_redirect_uri']);
     }
 
     /**
      * Get associated authorization code scopes from Redis storage.
-     * 
+     *
      * @param  \League\OAuth2\Server\Entity\AuthCodeEntity  $code
      * @return array
      */
@@ -35,14 +35,15 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
     {
         $scopes = [];
 
-        foreach ($this->getSet($code->getToken(), 'oauth_auth_code_scopes') as $scope) {
+        foreach ($this->getSet($code->getId(), 'oauth_auth_code_scopes') as $scope) {
             if (! $scope = $this->getValue($scope['id'], 'oauth_scopes')) {
                 continue;
             }
 
-            $scopes[] = (new ScopeEntity($this->getServer()))
-                ->setId($scope['id'])
-                ->setDescription($scope['description']);
+            $scopes[] = (new ScopeEntity($this->server))->hydrate([
+                'id'            => $scope['id'],
+                'description'   => $scope['description']
+            ]);
         }
 
         return $scopes;
@@ -50,55 +51,51 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
 
     /**
      * Creates a new authorization code in Redis storage.
-     * 
+     *
      * @param  string  $code
      * @param  int  $expireTime
      * @param  string|int  $sessionId
-     * @return \League\OAuth2\Server\Entity\AuthCodeEntity
      */
-    public function create($code, $expireTime, $sessionId)
+    public function create($code, $expireTime, $sessionId, $redirectUri)
     {
         $payload = [
-            'id'          => $code,
-            'expire_time' => $expireTime,
-            'session_id'  => $sessionId
+            'id'                    => $code,
+            'expire_time'           => $expireTime,
+            'session_id'            => $sessionId,
+            'client_redirect_uri'   =>  $redirectUri
         ];
-        
+
         $this->setValue($code, 'oauth_auth_codes', $payload);
         $this->pushSet(null, 'oauth_auth_codes', $code);
-
-        return (new AuthCodeEntity($this->getServer()))
-               ->setToken($code)
-               ->setExpireTime($expireTime);
     }
 
     /**
      * Associate a scope with an authorization code in Redis storage.
-     * 
+     *
      * @param  \League\OAuth2\Server\Entity\AuthCodeEntity  $code
      * @param  \League\OAuth2\Server\Entity\ScopeEntity  $scope
      * @return void
      */
     public function associateScope(AuthCodeEntity $code, ScopeEntity $scope)
     {
-        $this->pushSet($code->getToken(), 'oauth_auth_code_scopes', ['id' => $scope->getId()]);
+        $this->pushSet($code->getId(), 'oauth_auth_code_scopes', ['id' => $scope->getId()]);
     }
 
     /**
      * Delete an authorization code from Redis storage.
-     * 
+     *
      * @param  \League\OAuth2\Server\Entity\AuthCodeEntity  $code
      * @return void
      */
     public function delete(AuthCodeEntity $code)
     {
         // Deletes the authorization code entry.
-        $this->deleteKey($code->getToken(), 'oauth_auth_codes');
+        $this->deleteKey($code->getId(), 'oauth_auth_codes');
 
         // Deletes the authorization code entry from the authorization codes set.
-        $this->deleteSet(null, 'oauth_auth_codes', $code->getToken());
+        $this->deleteSet(null, 'oauth_auth_codes', $code->getId());
 
         // Deletes the authorization codes associated scopes.
-        $this->deleteKey($code->getToken(), 'oauth_auth_code_scopes');
+        $this->deleteKey($code->getId(), 'oauth_auth_code_scopes');
     }
 }
