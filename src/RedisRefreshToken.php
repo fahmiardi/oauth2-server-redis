@@ -42,6 +42,10 @@ class RedisRefreshToken extends RedisAdapter implements RefreshTokenInterface
 
         $this->setValue($token, 'oauth_refresh_tokens', $payload);
         $this->pushSet(null, 'oauth_refresh_tokens', $token);
+
+        return (new RefreshTokenEntity($this->getServer()))
+               ->setId($token)
+               ->setExpireTime($expireTime);
     }
 
     /**

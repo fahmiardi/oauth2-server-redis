@@ -83,6 +83,10 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
 
         $this->setValue($token, 'oauth_access_tokens', $payload);
         $this->pushSet(null, 'oauth_access_tokens', $token);
+
+        return (new AccessTokenEntity($this->getServer()))
+               ->setId($token)
+               ->setExpireTime($expireTime);
     }
 
     /**

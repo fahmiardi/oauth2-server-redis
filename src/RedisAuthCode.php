@@ -67,6 +67,10 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
 
         $this->setValue($code, 'oauth_auth_codes', $payload);
         $this->pushSet(null, 'oauth_auth_codes', $code);
+
+        return (new AuthCodeEntity($this->getServer()))
+               ->setId($code)
+               ->setRedirectUri($redirectUri);
     }
 
     /**
