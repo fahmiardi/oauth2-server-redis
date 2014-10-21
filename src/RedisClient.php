@@ -42,11 +42,6 @@ class RedisClient extends RedisAdapter implements ClientInterface
             return null;
         }
 
-        // Attempt to grab a redirection URI from the storage that matches the
-        // supplied redirection URI. If we can't find a match then we'll set
-        // this it as "null".
-        $client['redirect_uri'] = $this->getMatchingRedirectUri($clientId, $redirectUri);
-
         // If a secret and redirection URI were given then we must correctly
         // validate the client by comparing its ID, secret, and that
         // the supplied redirection URI was registered.
@@ -80,20 +75,6 @@ class RedisClient extends RedisAdapter implements ClientInterface
             'name'          => $client['name'],
             'redirect_uri'  => $client['redirect_uri']
         ]);
-    }
-
-    /**
-     * Get a matching redirect URI associated with a client.
-     *
-     * @param  string  $clientId
-     * @param  string  $redirectUri
-     * @return string|null
-     */
-    protected function getMatchingRedirectUri($clientId, $redirectUri)
-    {
-        return $this->getMatchingMember($clientId, 'oauth_client_endpoints', function ($value) use ($redirectUri) {
-            return $value['redirect_uri'] == $redirectUri ? $value['redirect_uri'] : null;
-        });
     }
 
     /**
