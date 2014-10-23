@@ -22,6 +22,10 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
             return null;
         }
 
+        if ($access['expire_time'] < time()) {
+            return null;
+        }
+
         return (new AccessTokenEntity($this->server))
             ->setId($access['id'])
             ->setExpireTime($access['expire_time']);
