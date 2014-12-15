@@ -4,13 +4,13 @@ namespace Lewis\OAuth2\Server\Storage;
 
 use Closure;
 use Predis\Client;
-use League\OAuth2\Server\Storage\Adapter;
+use League\OAuth2\Server\Storage\AbstractStorage;
 
-class RedisAdapter extends Adapter
+class RedisAdapter extends AbstractStorage
 {
     /**
      * Create a new redis adpater instance.
-     * 
+     *
      * @param  \Predis\Client  $redis
      * @return void
      */
@@ -21,7 +21,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Get a value from the Redis store.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @return mixed
@@ -43,7 +43,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Set a value in the Redis store.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @param  mixed  $value
@@ -60,7 +60,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Push a value onto a set.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @param  mixed  $value
@@ -81,7 +81,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Get a set from the Redis store.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @return array
@@ -109,7 +109,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Delete a value from a set.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @param  string  $value
@@ -128,7 +128,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Delete a key from the Redis store.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @return int
@@ -148,7 +148,7 @@ class RedisAdapter extends Adapter
      * Get a matching set member by using a callback to run the
      * comparison. If the callback returns a non-null response
      * then that response is assumed to be a match.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @param  \Closure  $callback
@@ -165,7 +165,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Increment the value of a key by one.
-     * 
+     *
      * @param  string  $table
      * @return int
      */
@@ -178,7 +178,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Prepare a value for storage in Redis.
-     * 
+     *
      * @param  mixed  $value
      * @return string
      */
@@ -193,7 +193,7 @@ class RedisAdapter extends Adapter
 
     /**
      * Prefix a key with its table.
-     * 
+     *
      * @param  string  $key
      * @param  string  $table
      * @return string

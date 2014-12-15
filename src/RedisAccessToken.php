@@ -22,10 +22,6 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
             return null;
         }
 
-        if ($access['expire_time'] < time()) {
-            return null;
-        }
-
         return (new AccessTokenEntity($this->server))
             ->setId($access['id'])
             ->setExpireTime($access['expire_time']);
@@ -49,10 +45,10 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
     /**
      * Get associated access token scopes from Redis storage.
      *
-     * @param  \League\OAuth2\Server\Entity\AbstractTokenEntity  $token
+     * @param  \League\OAuth2\Server\Entity\AccessTokenEntity  $token
      * @return array
      */
-    public function getScopes(AbstractTokenEntity $token)
+    public function getScopes(AccessTokenEntity $token)
     {
         $scopes = [];
 
@@ -87,10 +83,6 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
 
         $this->setValue($token, 'oauth_access_tokens', $payload);
         $this->pushSet(null, 'oauth_access_tokens', $token);
-
-        return (new AccessTokenEntity($this->getServer()))
-               ->setId($token)
-               ->setExpireTime($expireTime);
     }
 
     /**
@@ -100,7 +92,7 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
      * @param  \League\OAuth2\Server\Entity\ScopeEntity  $scope
      * @return void
      */
-    public function associateScope(AbstractTokenEntity $token, ScopeEntity $scope)
+    public function associateScope(AccessTokenEntity $token, ScopeEntity $scope)
     {
         $this->pushSet($token->getId(), 'oauth_access_token_scopes', ['id' => $scope->getId()]);
     }
@@ -111,7 +103,7 @@ class RedisAccessToken extends RedisAdapter implements AccessTokenInterface
      * @param  \League\OAuth2\Server\Entity\AbstractTokenEntity  $token
      * @return void
      */
-    public function delete(AbstractTokenEntity $token)
+    public function delete(AccessTokenEntity $token)
     {
         // Deletes the access token entry.
         $this->deleteKey($token->getId(), 'oauth_access_tokens');

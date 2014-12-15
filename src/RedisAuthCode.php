@@ -20,9 +20,15 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
             return null;
         }
 
+        if ($code['expire_time'] >= time()) {
+            return null;
+        }
+
         return (new AuthCodeEntity($this->server))
             ->setId($code['id'])
-            ->setRedirectUri($code['client_redirect_uri']);
+            ->setRedirectUri($code['client_redirect_uri'])
+            ->setExpireTime($code['expire_time']);
+
     }
 
     /**
@@ -67,10 +73,6 @@ class RedisAuthCode extends RedisAdapter implements AuthCodeInterface
 
         $this->setValue($code, 'oauth_auth_codes', $payload);
         $this->pushSet(null, 'oauth_auth_codes', $code);
-
-        return (new AuthCodeEntity($this->getServer()))
-               ->setId($code)
-               ->setRedirectUri($redirectUri);
     }
 
     /**

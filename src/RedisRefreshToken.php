@@ -19,10 +19,6 @@ class RedisRefreshToken extends RedisAdapter implements RefreshTokenInterface
             return null;
         }
 
-        if ($refresh['expire_time'] < time()) {
-            return null;
-        }
-
         return (new RefreshTokenEntity($this->server))
             ->setId($refresh['id'])
             ->setExpireTime($refresh['expire_time'])
@@ -46,10 +42,6 @@ class RedisRefreshToken extends RedisAdapter implements RefreshTokenInterface
 
         $this->setValue($token, 'oauth_refresh_tokens', $payload);
         $this->pushSet(null, 'oauth_refresh_tokens', $token);
-
-        return (new RefreshTokenEntity($this->getServer()))
-               ->setId($token)
-               ->setExpireTime($expireTime);
     }
 
     /**
